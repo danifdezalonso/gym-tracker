@@ -54,7 +54,7 @@ export default function HomePage() {
       setRecentSessions(recentRes.data ?? [])
       setLoading(false)
     }
-    load()
+    load().catch(() => setLoading(false))
   }, [selectedDay])
 
   async function startWorkout() {
