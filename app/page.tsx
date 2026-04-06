@@ -168,11 +168,7 @@ export default function HomePage() {
             <button
               onClick={startWorkout}
               disabled={starting}
-              className={`w-full h-14 rounded-xl font-bold text-base transition-all active:scale-95 disabled:opacity-60 ${
-                todaySession
-                  ? 'bg-zinc-700 text-white'
-                  : 'bg-orange-500 text-white hover:bg-orange-600'
-              }`}
+              className="w-full h-14 rounded-xl font-bold text-base transition-all active:scale-95 disabled:opacity-60 bg-orange-500 text-white hover:bg-orange-600"
             >
               {starting
                 ? 'Cargando...'
