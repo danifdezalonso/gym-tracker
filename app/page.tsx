@@ -66,19 +66,24 @@ export default function HomePage() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('sessions')
-      .insert({ date: today, day_type: selectedDay })
-      .select()
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert({ date: today, day_type: selectedDay })
+        .select()
+        .single()
 
-    if (error || !data) {
+      if (error || !data) {
+        setStarting(false)
+        alert(`Error al crear sesión: ${error?.message ?? 'sin datos'}`)
+        return
+      }
+
+      router.push(`/workout/${data.id}`)
+    } catch (e) {
       setStarting(false)
-      alert('Error al crear sesión. Verifica tu conexión.')
-      return
+      alert(`Error inesperado: ${e instanceof Error ? e.message : String(e)}`)
     }
-
-    router.push(`/workout/${data.id}`)
   }
 
   const workout = WORKOUTS[selectedDay]
