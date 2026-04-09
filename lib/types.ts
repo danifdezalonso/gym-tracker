@@ -1,4 +1,4 @@
-export type DayType = 'push' | 'pull' | 'legs'
+export type DayType = 'push' | 'pull' | 'legs' | 'upper'
 
 export interface Session {
   id: string
@@ -31,4 +31,5 @@ export interface WorkoutDay {
   day: string
   dayIndex: number
   exercises: Exercise[]
+  optional?: boolean
 }

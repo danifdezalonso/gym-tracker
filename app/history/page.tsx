@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { WORKOUTS, DAY_TYPE_COLORS, DAY_TYPE_BG } from '@/lib/workouts'
+import { WORKOUTS, DAY_TYPE_COLORS, DAY_TYPE_BG, DAY_TYPE_LETTER } from '@/lib/workouts'
 import type { Session, SetRecord, DayType } from '@/lib/types'
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -109,7 +109,7 @@ export default function HistoryPage() {
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${DAY_TYPE_BG[s.day_type as DayType]}`}>
                     <span className={`text-sm font-bold ${color}`}>
-                      {s.day_type === 'push' ? 'P' : s.day_type === 'pull' ? 'J' : 'L'}
+                      {DAY_TYPE_LETTER[s.day_type as DayType]}
                     </span>
                   </div>
 

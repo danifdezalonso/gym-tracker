@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { WORKOUTS, getTodayDayType, DAY_TYPE_COLORS, DAY_TYPE_BG } from '@/lib/workouts'
+import { WORKOUTS, getTodayDayType, DAY_TYPE_COLORS, DAY_TYPE_BG, DAY_TYPE_LETTER } from '@/lib/workouts'
 import type { DayType, Session } from '@/lib/types'
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -19,15 +19,18 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
+const DAY_ORDER: DayType[] = ['pull', 'legs', 'push', 'upper']
+
 export default function HomePage() {
   const router = useRouter()
   const todayDayType = getTodayDayType()
 
-  const [selectedDay, setSelectedDay] = useState<DayType>(todayDayType ?? 'push')
+  const [selectedDay, setSelectedDay] = useState<DayType>(todayDayType ?? 'pull')
   const [todaySession, setTodaySession] = useState<Session | null | undefined>(undefined)
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
   const [starting, setStarting] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -86,6 +89,16 @@ export default function HomePage() {
     }
   }
 
+  async function deleteSession(id: string) {
+    if (!confirm('¿Eliminar esta sesión?')) return
+    setDeletingId(id)
+    // Optimistic remove
+    setRecentSessions((prev) => prev.filter((s) => s.id !== id))
+    if (todaySession?.id === id) setTodaySession(null)
+    await supabase.from('sessions').delete().eq('id', id)
+    setDeletingId(null)
+  }
+
   const workout = WORKOUTS[selectedDay]
   const colorClass = DAY_TYPE_COLORS[selectedDay]
   const bgClass = DAY_TYPE_BG[selectedDay]
@@ -114,25 +127,27 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Day selector */}
+      {/* Day selector — 2×2 grid */}
       <div className="px-4 mb-6">
-        <div className="grid grid-cols-3 gap-2 p-1 bg-zinc-900 rounded-2xl">
-          {(['push', 'pull', 'legs'] as DayType[]).map((d) => {
+        <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-900 rounded-2xl">
+          {DAY_ORDER.map((d) => {
             const isToday = d === todayDayType
             const isSelected = d === selectedDay
+            const isOptional = WORKOUTS[d].optional
             return (
               <button
                 key={d}
                 onClick={() => setSelectedDay(d)}
-                className={`py-2.5 px-3 rounded-xl text-sm font-semibold transition-all ${
+                className={`py-2.5 px-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
                   isSelected
                     ? 'bg-zinc-700 text-white shadow-sm'
                     : 'text-zinc-500 active:bg-zinc-800'
                 }`}
               >
                 {WORKOUTS[d].name}
-                {isToday && (
-                  <span className="ml-1 text-[10px] text-orange-400">hoy</span>
+                {isToday && <span className="text-[10px] text-orange-400">hoy</span>}
+                {isOptional && !isToday && (
+                  <span className="text-[9px] text-zinc-600 font-normal">opt.</span>
                 )}
               </button>
             )
@@ -149,8 +164,8 @@ export default function HomePage() {
               <p className="text-zinc-400 text-sm mt-0.5">{workout.subtitle}</p>
               <p className="text-zinc-500 text-xs mt-1">{workout.day}</p>
             </div>
-            <span className={`text-4xl font-black opacity-20 ${colorClass}`}>
-              {selectedDay === 'push' ? 'P' : selectedDay === 'pull' ? 'J' : 'L'}
+            <span className={`text-3xl font-black opacity-20 ${colorClass}`}>
+              {DAY_TYPE_LETTER[selectedDay]}
             </span>
           </div>
 
@@ -173,7 +188,7 @@ export default function HomePage() {
             <button
               onClick={startWorkout}
               disabled={starting}
-              className="w-full h-14 rounded-xl font-bold text-base transition-all active:scale-95 disabled:opacity-60 bg-orange-500 text-white hover:bg-orange-600"
+              className="w-full h-14 rounded-xl font-bold text-base transition-all active:scale-95 disabled:opacity-60 bg-orange-500 text-white"
             >
               {starting
                 ? 'Cargando...'
@@ -185,16 +200,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Rest day banner (if today is not a workout day and no override) */}
-      {todayDayType === null && selectedDay === todayDayType && (
-        <div className="px-4 mb-6">
-          <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 text-center">
-            <p className="text-zinc-400 text-sm">Hoy es día de descanso</p>
-            <p className="text-zinc-600 text-xs mt-1">Usa el selector de arriba para entrenar de todos modos</p>
-          </div>
-        </div>
-      )}
-
       {/* Recent sessions */}
       {recentSessions.length > 0 && (
         <div className="px-4">
@@ -205,27 +210,36 @@ export default function HomePage() {
             {recentSessions.map((s) => {
               const w = WORKOUTS[s.day_type as DayType]
               const color = DAY_TYPE_COLORS[s.day_type as DayType]
+              const letter = DAY_TYPE_LETTER[s.day_type as DayType]
               return (
-                <Link
-                  key={s.id}
-                  href={`/workout/${s.id}`}
-                  className="flex items-center justify-between p-3.5 bg-zinc-900 rounded-xl border border-zinc-800 active:bg-zinc-800"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center`}>
-                      <span className={`text-xs font-bold ${color}`}>
-                        {s.day_type === 'push' ? 'P' : s.day_type === 'pull' ? 'J' : 'L'}
-                      </span>
+                <div key={s.id} className="flex items-center gap-2">
+                  <Link
+                    href={`/workout/${s.id}`}
+                    className="flex-1 flex items-center justify-between p-3.5 bg-zinc-900 rounded-xl border border-zinc-800 active:bg-zinc-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
+                        <span className={`text-xs font-bold ${color}`}>{letter}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{w?.name ?? s.day_type}</p>
+                        <p className="text-zinc-500 text-xs">{formatDate(s.date)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{w.name}</p>
-                      <p className="text-zinc-500 text-xs">{formatDate(s.date)}</p>
-                    </div>
-                  </div>
-                  <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
+                    <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                  <button
+                    onClick={() => deleteSession(s.id)}
+                    disabled={deletingId === s.id}
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-600 active:bg-red-500/20 active:text-red-400 active:border-red-500/30 disabled:opacity-40"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               )
             })}
           </div>
