@@ -7,6 +7,7 @@ export const WORKOUTS: Record<DayType, WorkoutDay> = {
     day: 'Lunes',
     dayIndex: 1,
     exercises: [
+      { name: 'Press de Banca con Barra', sets: 4, repsRange: '6-8' },
       { name: 'Jalón al Pecho', sets: 4, repsRange: '6-8' },
       { name: 'Remo con Mancuerna a Un Brazo', sets: 3, repsRange: '8-10' },
       { name: 'Remo en Cable Sentado', sets: 3, repsRange: '10-12' },
